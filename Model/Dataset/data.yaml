@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 10
+names: ['ATmega328 chip', 'Arduino board', 'Overheat', 'Scratch', 'USB', 'capacitor', 'mouse bite', 'pins', 'resistor', 'spur']
+
+roboflow:
+  workspace: test-gcghf
+  project: my-first-project-gzzit
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/test-gcghf/my-first-project-gzzit/dataset/3

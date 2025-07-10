@@ -52,7 +52,7 @@ class Ui_MainWindow(object):
         self.list_label = QtWidgets.QLabel(self.widget_list)
         self.list_label.setObjectName("list_label")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.list_label)
-        self.defective_board_list = QtWidgets.QListView(self.widget_list)
+        self.defective_board_list = QtWidgets.QListWidget(self.widget_list)
         self.defective_board_list.setObjectName("defective_board_list")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.SpanningRole, self.defective_board_list)
         self.gridLayout.addWidget(self.widget_list, 3, 1, 1, 2)

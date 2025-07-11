@@ -5,6 +5,7 @@ from pathlib import Path
 from PyQt5 import QtWidgets, QtGui, QtCore
 from GUI.ui_main_window import Ui_MainWindow
 from loguru import logger
+from ultralytics import YOLO
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -13,24 +14,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.setCentralWidget(self.ui.centralwidget)
 
-        # Инициализация видеозахвата
-        self.cap = cv2.VideoCapture(0)  # 0 - камера по умолчанию
+        self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
             logger.error("Не удалось открыть камеру")
-            QtWidgets.QMessageBox.critical(self, "Ошибка", "Не удалось открыть камеру.  Проверьте подключение.")
+            QtWidgets.QMessageBox.critical(self, "Ошибка", "Не удалось открыть камеру. Проверьте подключение.")
             sys.exit()
 
-        # Настройка таймера
+        # Путь к модели
+        model_path = Path(__file__).parent / "Model" / "runs" / "detect" / "train2" / "weights" / "best.pt"
+        if not model_path.exists():
+            logger.error(f"Model file not found at: {model_path}")
+            QtWidgets.QMessageBox.critical(self, "Ошибка", f"Модель не найдена по пути: {model_path}")
+            sys.exit()
+        self.model = YOLO(str(model_path))
+
+
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_frame)
-        self.timer.start(30)  # Обновление каждые 30 мс
+        self.timer.start(30)
 
         self.path_logs = Path(__file__).parent / "Logs"
         self.ui.log_path_edit.setText(str(self.path_logs))
-
         logger.add(sys.stderr, format="{time} {level} {message}\n", level="INFO")
         logger.add(os.path.join(self.path_logs, "app.log"), rotation="500 MB", level="DEBUG", encoding="utf8")
-
         self.setup_connections()
 
     def setup_connections(self):
@@ -40,28 +46,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.log_path_button.clicked.connect(self.choose_logs_path)
 
     def update_frame(self):
-        """Обработка поступающих кадров и помещение их в QLabel (video_frame)"""
-        ret, frame = self.cap.read()  # ret - булевская переменная (true, если кадр был успешно считан), frame - кадр видео в виде массива NumPy.
+        ret, frame = self.cap.read()
         if ret:
-            # Преобразование кадра OpenCV в формат QImage
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, ch = frame.shape  # ch - количество цветовых компонентов (байт на пиксель)
-            bytes_per_line = ch * w  # вычисление количества байт для хранения 1-й строки изображения
-            q_image = QtGui.QImage(frame.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-            pixmap = QtGui.QPixmap.fromImage(q_image)  # QPixmap - класс, оптимизированный для отображения изображения на экране
-            # Масштабирование
-            pixmap = pixmap.scaled(self.ui.video_frame.width(), self.ui.video_frame.height(), QtCore.Qt.KeepAspectRatio)  # масштабируем изображение с сохранением пропорций (последний параметр)
+            results = self.model(frame)
+            annotated_frame = results[0].plot()
+            annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+            h, w, ch = annotated_frame.shape
+            bytes_per_line = ch * w
+            q_image = QtGui.QImage(annotated_frame.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+            pixmap = QtGui.QPixmap.fromImage(q_image)
+            pixmap = pixmap.scaled(self.ui.video_frame.width(), self.ui.video_frame.height(), QtCore.Qt.KeepAspectRatio)
             self.ui.video_frame.setPixmap(pixmap)
 
     def closeEvent(self, event):
-        """Обработка закрытия окна приложения и освобождения ресурсов веб-камеры"""
-        reply = QtWidgets.QMessageBox.question(
-            self, 'Закрыть окно',
-            'Вы уверены, что хотите закрыть окно?',
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-            QtWidgets.QMessageBox.No
-        )
-
+        reply = QtWidgets.QMessageBox.question(self, 'Закрыть окно', 'Вы уверены, что хотите закрыть окно?', QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No)
         if reply == QtWidgets.QMessageBox.Yes:
             try:
                 self.cap.release()
@@ -128,4 +126,4 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    sys.exit(app.exec_())  # Запускаем цикл обработки событий
+    sys.exit(app.exec_())

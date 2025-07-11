@@ -1,0 +1,7 @@
+2025-07-11 11:01:39.575 | INFO     | __main__:choose_log_path:101 - Путь к логам изменен на: D:/Python projects/Defect_detection_app/New
+2025-07-11 11:01:59.840 | INFO     | __main__:choose_log_path:101 - Путь к логам изменен на: D:/Python projects/Defect_detection_app/New
+2025-07-11 12:07:16.897 | INFO     | __main__:closeEvent:67 - Ресурсы камеры успешно освобождены
+2025-07-11T12:07:48.072282+0300 INFO Сохранен кадр бракованной платы: Data/Defective image\frame_20250711_120748.jpg
+
+2025-07-11T12:08:46.953645+0300 INFO Ресурсы камеры успешно освобождены
+

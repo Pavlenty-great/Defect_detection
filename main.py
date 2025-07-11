@@ -1,6 +1,7 @@
 import sys
 import cv2
 import os
+from pathlib import Path
 from PyQt5 import QtWidgets, QtGui, QtCore
 from GUI.ui_main_window import Ui_MainWindow
 from loguru import logger
@@ -24,11 +25,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(30)  # Обновление каждые 30 мс
 
-        self.path_logs = "D:/Python projects/Defect_detection_app/Logs"
-        self.ui.log_path_edit.setText(self.path_logs)
+        self.path_logs = Path(__file__).parent / "Logs"
+        self.ui.log_path_edit.setText(str(self.path_logs))
 
         logger.add(sys.stderr, format="{time} {level} {message}\n", level="INFO")
-        logger.add(os.path.join(self.path_logs, "app.log"), rotation="500 MB", level="DEBUG", encoding="utf8", format="{time} {level} {message}\n")
+        logger.add(os.path.join(self.path_logs, "app.log"), rotation="500 MB", level="DEBUG", encoding="utf8")
 
         self.setup_connections()
 
@@ -75,11 +76,11 @@ class MainWindow(QtWidgets.QMainWindow):
         """Сохранение кадра при нажатии на элемент окна - save_button"""
         ret, frame = self.cap.read()
         if ret:
-            save_folder = "Data/Defective image"
+            save_folder = Path(__file__).parent / "Data" / "Defective image"
 
             timestamp = QtCore.QDateTime.currentDateTime().toString("yyyyMMdd_HHmmss") #  Формат: годМесяцДень_ЧасыМинутыСекунды
             filename = f"frame_{timestamp}.jpg"
-            filepath = os.path.join(save_folder, filename)
+            filepath = os.path.join(str(save_folder), filename)
 
             try:
                 cv2.imwrite(filepath, frame)  # Сохраняем в BGR
@@ -101,13 +102,13 @@ class MainWindow(QtWidgets.QMainWindow):
         new_path_logs = QtWidgets.QFileDialog.getExistingDirectory(
             self,
             "Выберите папку для логов",
-            self.path_logs  # Начинаем с текущего пути (если он задан)
+            str(self.path_logs)  # Начинаем с текущего пути (если он задан)
         )
 
         # Если пользователь выбрал путь (не нажал "Отмена")
         if new_path_logs:
             self.path_logs = new_path_logs
-            self.ui.log_path_edit.setText(self.path_logs)
+            self.ui.log_path_edit.setText(str(self.path_logs))
 
             self.configure_loguru(self.path_logs)
 

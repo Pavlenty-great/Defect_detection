@@ -5,6 +5,7 @@ from pathlib import Path
 from PyQt5 import QtWidgets, QtGui, QtCore
 from GUI.ui_main_window import Ui_MainWindow
 from loguru import logger
+from ultralytics import YOLO
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -12,6 +13,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setCentralWidget(self.ui.centralwidget)
+
+        model_path = Path(__file__).parent / "Model" / "runs" / "detect" / "train2" / "weights" / "best.pt"
+        if not model_path.exists():
+            logger.error(f"Model file not found at: {model_path}")
+            QtWidgets.QMessageBox.critical(self, "Ошибка", f"Модель не найдена по пути: {model_path}")
+            sys.exit()
+        self.model = YOLO(str(model_path))
 
         # Инициализация видеозахвата
         self.cap = cv2.VideoCapture(0)  # 0 - камера по умолчанию
@@ -43,15 +51,47 @@ class MainWindow(QtWidgets.QMainWindow):
         """Обработка поступающих кадров и помещение их в QLabel (video_frame)"""
         ret, frame = self.cap.read()  # ret - булевская переменная (true, если кадр был успешно считан), frame - кадр видео в виде массива NumPy.
         if ret:
-            # Преобразование кадра OpenCV в формат QImage
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, ch = frame.shape  # ch - количество цветовых компонентов (байт на пиксель)
-            bytes_per_line = ch * w  # вычисление количества байт для хранения 1-й строки изображения
-            q_image = QtGui.QImage(frame.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-            pixmap = QtGui.QPixmap.fromImage(q_image)  # QPixmap - класс, оптимизированный для отображения изображения на экране
-            # Масштабирование
-            pixmap = pixmap.scaled(self.ui.video_frame.width(), self.ui.video_frame.height(), QtCore.Qt.KeepAspectRatio)  # масштабируем изображение с сохранением пропорций (последний параметр)
-            self.ui.video_frame.setPixmap(pixmap)
+            try:
+                results = self.model(frame)
+                annotated_frame = results[0].plot()
+                annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+                h, w, ch = annotated_frame.shape
+                bytes_per_line = ch * w
+                q_image = QtGui.QImage(annotated_frame.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+                pixmap = QtGui.QPixmap.fromImage(q_image)
+                pixmap = pixmap.scaled(self.ui.video_frame.width(), self.ui.video_frame.height(), QtCore.Qt.KeepAspectRatio)
+                self.ui.video_frame.setPixmap(pixmap)
+
+                result_text = self.determine_result(results)
+                self.ui.result.setText(result_text)  # Обновляем QLabel с результатом
+
+                logger.debug("Кадр успешно обработан и отображен")
+            except Exception as e:
+                logger.error(f"Ошибка при обработке кадра: {e}")
+        else:
+            logger.warning("Не удалось получить кадр")
+
+    def determine_result(self, results):
+        """Определение результата: "Годная", если нет объектов с запрещенными индексами."""
+        # Список индексов классов, которые считаются дефектами
+        forbidden_class_indices = [2, 3, 6, 9]  # Пример: классы 0, 2 и 5 считаются дефектами
+        classes_should_be = [0, 1, 4, 5, 7, 8]
+
+        if len(results[0].boxes) == 0:
+            return "Брак"  # Если ничего не обнаружено, это брак
+
+        # Получаем список индексов классов обнаруженных объектов
+        detected_classes = results[0].boxes.cls.tolist()
+        found_required = any(class_index not in detected_classes for class_index in classes_should_be)
+        if found_required:
+            return "Брак"
+        # Проверяем, есть ли в списке обнаруженных классов какие-либо запрещенные индексы
+        for class_index in forbidden_class_indices:
+            if class_index in detected_classes:
+                return "Брак"  # Если найден запрещенный индекс, то это брак
+
+        # Если не найден ни один запрещенный индекс, то плата годная
+        return "Годная"
 
     def closeEvent(self, event):
         """Обработка закрытия окна приложения и освобождения ресурсов веб-камеры"""

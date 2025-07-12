@@ -14,6 +14,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.setCentralWidget(self.ui.centralwidget)
 
+        # Подключение модели
         model_path = Path(__file__).parent / "Model" / "runs" / "detect" / "train2" / "weights" / "best.pt"
         if not model_path.exists():
             logger.error(f"Model file not found at: {model_path}")
@@ -48,7 +49,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.log_path_button.clicked.connect(self.choose_logs_path)
 
     def update_frame(self):
-        """Обработка поступающих кадров и помещение их в QLabel (video_frame)"""
+        """Обработка поступающих кадров с помощью модели и помещение их в QLabel (video_frame) с разметкой"""
         ret, frame = self.cap.read()  # ret - булевская переменная (true, если кадр был успешно считан), frame - кадр видео в виде массива NumPy.
         if ret:
             try:
@@ -64,33 +65,31 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 result_text = self.determine_result(results)
                 self.ui.result.setText(result_text)  # Обновляем QLabel с результатом
-
-                logger.debug("Кадр успешно обработан и отображен")
             except Exception as e:
                 logger.error(f"Ошибка при обработке кадра: {e}")
         else:
             logger.warning("Не удалось получить кадр")
 
     def determine_result(self, results):
-        """Определение результата: "Годная", если нет объектов с запрещенными индексами."""
+        """Определение результата: "Годная" или "Брак"."""
         # Список индексов классов, которые считаются дефектами
-        forbidden_class_indices = [2, 3, 6, 9]  # Пример: классы 0, 2 и 5 считаются дефектами
+        forbidden_class_indices = [2, 3, 6, 9]
+        # Список индексов классов, которые должны присутствовать на плате
         classes_should_be = [0, 1, 4, 5, 7, 8]
 
         if len(results[0].boxes) == 0:
-            return "Брак"  # Если ничего не обнаружено, это брак
+            return "Брак"
 
         # Получаем список индексов классов обнаруженных объектов
         detected_classes = results[0].boxes.cls.tolist()
         found_required = any(class_index not in detected_classes for class_index in classes_should_be)
+
         if found_required:
             return "Брак"
-        # Проверяем, есть ли в списке обнаруженных классов какие-либо запрещенные индексы
         for class_index in forbidden_class_indices:
             if class_index in detected_classes:
-                return "Брак"  # Если найден запрещенный индекс, то это брак
+                return "Брак"
 
-        # Если не найден ни один запрещенный индекс, то плата годная
         return "Годная"
 
     def closeEvent(self, event):

@@ -7,3 +7,5 @@
 2025-07-12 20:19:24.343 | INFO     | __main__:closeEvent:117 - Ресурсы камеры успешно освобождены
 2025-07-12 20:24:06.619 | INFO     | __main__:save_frame:128 - Сохранен кадр бракованной платы: D:\Python projects\Defect_detection_app\Data\Defective image\frame_20250712_202406.jpg
 2025-07-12 20:24:14.396 | INFO     | __main__:closeEvent:108 - Ресурсы камеры успешно освобождены
+2025-07-12 23:29:24.532 | INFO     | __main__:save_frame:127 - Сохранен кадр бракованной платы: D:\Python projects\Defect_detection_app\Data\Defective image\frame_20250712_232924.jpg
+2025-07-12 23:29:38.896 | INFO     | __main__:closeEvent:107 - Ресурсы камеры успешно освобождены

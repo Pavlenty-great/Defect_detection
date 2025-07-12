@@ -56,8 +56,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         """Обработка закрытия окна приложения и освобождения ресурсов веб-камеры"""
         reply = QtWidgets.QMessageBox.question(
-            self, 'Закрыть окно',
-            'Вы уверены, что хотите закрыть окно?',
+            self, "Закрыть окно",
+            "Вы уверены, что хотите закрыть окно?",
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
             QtWidgets.QMessageBox.No
         )
